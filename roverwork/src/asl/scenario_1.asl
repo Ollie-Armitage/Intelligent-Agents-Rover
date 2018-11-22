@@ -1,3 +1,5 @@
+// Starting Beliefs.
+mapSize(20).
 rowStepsTaken(0).
 xStepsTaken(0).
 yStepsTaken(0).

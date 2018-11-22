@@ -1,20 +1,24 @@
 // Starting Beliefs.
-
+mapLength(40).
 rowStepsTaken(0).
 xStepsTaken(0).
 yStepsTaken(0).
 gold(0).
+capacity(0).
+speed(0).
+range(0).
+
 
 // Rules.
 
 horizontal_scanned :-
-	rowStepsTaken(X) & rover.ia.get_config(C,R,S,T) & (X >= (40-R)).
+	rowStepsTaken(X) & rover.ia.get_config(C,R,S,T) & mapLength(Map) & (X >= (Map-R)).
 	
 return_up :-
-	yStepsTaken(Y) & Y <= 20.
+	yStepsTaken(Y) & mapLength(Map) & Y <= (Map/2).
 
 return_left :-
-	xStepsTaken(X) & (X mod 40 <= 20).
+	xStepsTaken(X) & mapLength(Map) & (X mod Map <= (Map/2)).
 	
 at_Max_Capacity :-
 	rover.ia.get_config(C,R,S,T) & gold(X) & (C <= X).
@@ -27,7 +31,11 @@ at_Max_Capacity :-
 
 +!start : true <-  rover.ia.get_energy(E);
 				   rover.ia.get_config(C,R,S,T);
+				   -+capacity(C);
+				   -+speed(S);
+				   -+range(R);
 				   .print("My Capacity: ", C,  " ...My Range: ", R, " .... My Speed: ", S,  "  ... My pref Type: " , T);
+				   
 				   ! scan_for_gold.
 
 
@@ -39,35 +47,45 @@ at_Max_Capacity :-
 
 +! returnY : not return_up <-
 	?yStepsTaken(Y);
-	move(0, 40-Y, 1).
+	?mapLength(Map);
+	move(0, Map-Y, 1).
 	
 +! returnX : return_left <-
 	?xStepsTaken(X);
-	move(-(X mod 40), 0, 1).
+	?mapLength(Map);
+	move(-(X mod Map), 0, 1).
 
 +! returnX : not return_left <-
 	?xStepsTaken(X);
-	move(40-(X mod 40), 0, 1).
+	?mapLength(Map);
+	move(Map -(X mod Map), 0, 1).
 	
 // Return from base goals.
 	
 +! reverseReturnY : return_up <- 
 	?yStepsTaken(Y);
+	?mapLength(Map);
 	move(0, Y, 1).
 
 +! reverseReturnY : not return_up <-
 	?yStepsTaken(Y);
-	move(0, Y-40, 1).
+	?mapLength(Map);
+	
+	move(0, Y-Map, 1).
 	
 +! reverseReturnX : return_left <-
 	?xStepsTaken(X);
-	move((X mod 40), 0, 1).
+	?mapLength(Map);
+	
+	move((X mod Map), 0, 1).
 
 +! reverseReturnX : not return_left <-
 	?xStepsTaken(X);
-	move((X mod 40)-40, 0, 1).
+	?mapLength(Map);
+	
+	move((X mod Map)-Map, 0, 1).
 
-+! scan_for_gold : true  <- scan(5).
++! scan_for_gold : true  <- scan(7).
 							
 +! move_strategically : true <-  
 							!patrol;							
@@ -140,7 +158,7 @@ at_Max_Capacity :-
 -! collect_gold: true <- .print("I failed to collect gold").
 						 
 
-+! move_to_gold(X, Y): true <- move(X, Y, 1);						
++! move_to_gold(X, Y): true <- move(X, Y, 1);					
 						 + at_gold;
 						 !collect_gold;
 						 move(-X, -Y, 1);
@@ -148,21 +166,61 @@ at_Max_Capacity :-
 						 
 
 
-// Plans.
-												   
-+ result(collect, 4): at_gold <- .print("I can not carry any more gold").
+// Events.
 
-+ result(collect, 3): at_gold <- .print("There is no gold here.").
-					
-+ result (scan, 0) : true <- -result(scan,0)[source(percept)].						
-							
+// Collect results.
+												   
++ result(collect, 0): true <- .print("Agent collected one resource from the Map successfully").
+								
+
++ result(collect, 1): true <- .print("The Agent does not have enough energy to move to collect the resource").
+
++ result(collect, 2): true <- .print("The Agent is unable to collect/does not support resource collection/ has a max_capacity of 0").
+
++ result(collect, 3): true <- .print("There is no resource at the Location").
+
++ result(collect, 4): true <- .print("The Agent is carrying its maximum load and has no space to accommodate the new item").
+
+// Scan results.
+
 + result(scan, -1) : true <- 	.print("I did not find anything after scanning");
-								!move_strategically.
-							 
-+ discovery(X,Y,Q,gold): true <- .print("I found gold and I am moving to it")			 
-								 !move_to_gold(X, Y).
+								!move_strategically.							 
+					
++ result (scan, 0) : true <- -result(scan,0)[source(percept)].
+
++ result (scan, 1): true <- .print("The Agent does not have enough energy to scan at the given range").	
+
++ result (scan, 2) : true <- .print("The Agent is unable to scan/does not support scanning/ has a scan range of 0").
+
++ result (scan, 3) : true <- .print("The scan range parameter provided is not a valid number").
+							
++ discovery(X,Y,Q,gold): not discovery_happening <- .print("I found gold and I am moving to it");
+								 + discovery_happening;		 
+								 !move_to_gold(X, Y);
+								 - discovery_happening.
+								 
+// Move results.
+
++ result (move, 0) : true <- .print("Movement was successful and Agent is at its destination").
+
++ result (move, 1) : true <- .print("The Agent does not have enough energy to move to the location at the specified speed").
+
++ result (move, 2) : true <- .print("The Agent is unable to move/does not support moving/ has a speed of 0").
+
++ result (move, 3) : true <- .print("The displacement or speed provided is not a valid number").
 								 							 
 + result (move, 4) : true <- .print("can\'t move there").
 
+// Deposit results.
+
++ result (deposit, 0): true <- .print("Agent deposited one resource to the Map successfully (To deposit at a Base, the Agent has to be at the base location").
+
++ result (deposit, 1): true <- .print("The Agent does not have enough energy to deposit the resource").
+
++ result (deposit, 2): true <- .print("The Agent is unable to deposit /does not support resource collecting and hence depositing / has a max_capacity of 0").
+
++ result (deposit, 3): true <- .print("The Agent does not have a resource to deposit").
+
+				
 
 				

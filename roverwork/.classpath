@@ -6,5 +6,6 @@
 	<classpathentry kind="lib" path="C:/Users/armer/eclipse/jason-2.2a/libs/jason-2.2.jar"/>
 	<classpathentry kind="lib" path="libs/rover_cw.jar"/>
 	<classpathentry kind="lib" path="libs/org.json.jar"/>
+	<classpathentry kind="lib" path="libs/internals.jar" sourcepath="src/java"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

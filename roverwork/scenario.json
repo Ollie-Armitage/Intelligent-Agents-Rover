@@ -1,5 +1,5 @@
 {
-	"version" :  "1.0.3",
+    "version" :  "1.0.4",
     "scenarios": [
     	{
     		"id": 				1,
@@ -49,7 +49,7 @@
 	    	"id": 5,
 	    	"agCount":  3,
 	    	"type": "random",
-	    	"energy_category": "medium",
+	    	"energy_category": "high",
 	    	"hasMultipleResources" : false
 	    },
 	     {
