@@ -1,25 +1,16 @@
 // Starting Beliefs.
-mapWidth(0).
 mapHeight(0).
-rowStepsTaken(0).
-xStepsTaken(0).
-yStepsTaken(0).
+mapWidth(0).
+xPosition(0).
+yPosition(0).
 gold(0).
-capacity(0).
-speed(0).
-range(0).
+
 
 
 // Rules.
 
 horizontal_scanned :-
-	rowStepsTaken(X) & rover.ia.get_config(C,R,S,T) & mapLength(Map) & (X >= (Map-R)).
-	
-return_up :-
-	yStepsTaken(Y) & mapLength(Map) & Y <= (Map/2).
-
-return_left :-
-	xStepsTaken(X) & mapLength(Map) & (X mod Map <= (Map/2)).
+	xPosition(X) & rover.ia.get_config(C,R,S,T) & mapWidth(Map) & (X >= (Map-R)).
 	
 at_Max_Capacity :-
 	rover.ia.get_config(C,R,S,T) & gold(X) & (C <= X).
@@ -40,18 +31,43 @@ at_Max_Capacity :-
 				   !scout_Horizontal;
 				   !scout_Vertical;
 				   !delegate_Position.
-				   
+
++!move(X, Y, Z) : true <-
+	?xPosition(OldX);
+	?yPosition(OldY);
+	move(X, Y, Z);
+	NewX = OldX + X;
+	NewY = OldY + Y;
+	-+xPosition(NewX);
+	-+yPosition(NewY);
+	.print("X: ", NewX, " Y: ", NewY).
+	
+	
+
+
+
+
 // Delegation Goals.
 
 +! delegate_Position : true <-
 	?mapWidth(X);
 	?mapHeight(Y);
-	.send(explorer1, achieve, move_down((Y/2)-1)).
+	.send(explorer1, achieve, move_down(Y/2));
+	.send(explorer2, achieve, scan_for_gold).
+	
+	
 	
 // Gold Updates.
 
-+! collect_gold(X, Y)[source(explorer1, explorer2)] : true <-
-	true.
+	
++! collect_gold(X, Y, Q) : not busy <-
+	+busy;
+	!move(X, Y, 1);
+	!pickup;
+	!move(-X, -Y, 1);
+	!deposit;
+	-busy.
+	
 
 //Scouting.
 
@@ -65,7 +81,6 @@ at_Max_Capacity :-
 	
 -! scout_Horizontal : true <-
 	?mapWidth(X);
-	.print("Map Width is: ", X);
 	.broadcast(tell, mapWidth(X)).
 	
 +! scout_Vertical : true <-
@@ -78,103 +93,9 @@ at_Max_Capacity :-
 	
 -! scout_Vertical : true <-
 	?mapHeight(Y);
-	.print("Map Height is: ", Y);
 	.broadcast(tell, mapHeight(Y)).
-					   				   
-
-// Return to base goals.
-
-+! returnY : return_up <- 
-	?yStepsTaken(Y);
-	move(0, -Y, 1).
-
-+! returnY : not return_up <-
-	?yStepsTaken(Y);
-	?mapLength(Map);
-	move(0, Map-Y, 1).
-	
-+! returnX : return_left <-
-	?xStepsTaken(X);
-	?mapLength(Map);
-	move(-(X mod Map), 0, 1).
-
-+! returnX : not return_left <-
-	?xStepsTaken(X);
-	?mapLength(Map);
-	move(Map -(X mod Map), 0, 1).
-	
-// Return from base goals.
-	
-+! reverseReturnY : return_up <- 
-	?yStepsTaken(Y);
-	?mapLength(Map);
-	move(0, Y, 1).
-
-+! reverseReturnY : not return_up <-
-	?yStepsTaken(Y);
-	?mapLength(Map);
-	
-	move(0, Y-Map, 1).
-	
-+! reverseReturnX : return_left <-
-	?xStepsTaken(X);
-	?mapLength(Map);
-	
-	move((X mod Map), 0, 1).
-
-+! reverseReturnX : not return_left <-
-	?xStepsTaken(X);
-	?mapLength(Map);
-	
-	move((X mod Map)-Map, 0, 1).
-
-+! scan_for_gold : true  <- scan(7).
+					   				   							
 							
-+! move_strategically : true <-  
-							!patrol;							
-							!scan_for_gold.
-							
-// Patrol until scanned a row, then step down to the next row.
-							
-+! patrol : not horizontal_scanned <- 
-	?rowStepsTaken(Steps);
-	?xStepsTaken(XSteps);
-	
-	rover.ia.get_config(C,R,S,T);
-	move(((2*R)-1),0,1);
-
-	Z = Steps + ((2*R)-1);
-	X = XSteps + ((2*R)-1);
-	
-	-+rowStepsTaken(Z);	
-	-+xStepsTaken(X).
-	
-+! patrol : horizontal_scanned <-
-	?yStepsTaken(Ysteps);
-	rover.ia.get_config(C,R,S,T);
-	move(0,R,1);	
-	
-	Z = Ysteps + (R);
-	-+yStepsTaken(Z);
-	
-	-+rowStepsTaken(0).
-
-// Return to base and deposit loot.
-
-+! returnLoot : at_Max_Capacity <- 
-	!returnY;
-	!returnX;
-	!deposit.
-
-+! returnLoot : not at_Max_Capacity <- !patrol.
-
-// Returns to place before looting.
-
-+! reverseReturn : true <-
-	!reverseReturnY;
-	!reverseReturnX;
-	!scan_for_gold.
-	
 // Deposit loot until empty.
 
 +! deposit : true <- .print("depositing");
@@ -186,28 +107,19 @@ at_Max_Capacity :-
 					  
 					  
 					  
--! deposit : true <- .print("No more to deposit at this time.");
-					!reverseReturn.
+-! deposit : true <- .print("No more to deposit at this time.").
 
 // Collect gold until no more gold.
 	
-+! collect_gold : true <-  .print("collecting gold");
++! pickup : true <-  .print("collecting gold");
 						   ?gold(X);
 						   Y = X + 1;
 						   -+gold(Y);
 						   do(collect);   
-						   !collect_gold.
+						   !pickup.
 						   
--! collect_gold: true <- .print("I failed to collect gold").
+-! pickup: true <- .print("I failed to pickup gold").
 						 
-
-+! move_to_gold(X, Y): true <- move(X, Y, 1);					
-						 + at_gold;
-						 !collect_gold;
-						 move(-X, -Y, 1);
-						 !returnLoot.
-						 
-
 
 // Events.
 
@@ -224,24 +136,6 @@ at_Max_Capacity :-
 
 + result(collect, 4): true <- .print("The Agent is carrying its maximum load and has no space to accommodate the new item").
 
-// Scan results.
-
-+ result(scan, -1) : true <- 	.print("I did not find anything after scanning");
-								!move_strategically.							 
-					
-+ result (scan, 0) : true <- -result(scan,0)[source(percept)].
-
-+ result (scan, 1): true <- .print("The Agent does not have enough energy to scan at the given range").	
-
-+ result (scan, 2) : true <- .print("The Agent is unable to scan/does not support scanning/ has a scan range of 0").
-
-+ result (scan, 3) : true <- .print("The scan range parameter provided is not a valid number").
-							
-+ discovery(X,Y,Q,gold): not discovery_happening <- .print("I found gold and I am moving to it");
-								 + discovery_happening;		 
-								 !move_to_gold(X, Y);
-								 - discovery_happening.
-								 
 // Move results.
 
 + result (move, 0) : true <- .print("Movement was successful and Agent is at its destination").
@@ -267,9 +161,36 @@ at_Max_Capacity :-
 // Delegation.
 
 
+
+
+
+-busy :  gold_at(X, Y, Q) & xPosition(0) & yPosition(0) <-
+		!collect_gold(X, Y, Q);
+		-gold_at(X, Y, Q).
+		
+
+
+
 + mapHeight(2) : true <- .send(explorer1, achieve, block_me_down).
 
 + mapWidth(2) : true <- .send(explorer2, achieve, block_me_right).
+
+
+// Map fixed to map size.
+				
++ xPosition(X) : mapWidth(Z) & (X >= Z) <- NewX = X - Z;
+							   -+xPosition(NewX).
+
+
++ xPosition(X) : mapWidth(Z) & (X < 0) <- NewX = X + Z;
+							   -+xPosition(NewX).
+							   				   
+							   
++ yPosition(Y) : mapHeight(Z) & (Y >= Z) <- NewY = Y - Z;
+							   -+yPosition(NewY).
+
++ yPosition(Y) : mapHeight(Z) & (Y < 0) <- NewY = Y + Z;
+							   -+yPosition(NewY).
 
 
 

@@ -8,7 +8,7 @@ gold(0).
 // Rules.
 
 horizontal_scanned :-
-	xPosition(X) & rover.ia.get_config(C,R,S,T) & mapWidth(Map) & (X >= (Map-R)).
+	xPosition(X) & rover.ia.get_config(C,R,S,T) & mapWidth(Map) & (X >= (Map-(2*R))).
 	
 	
 at_Max_Capacity :-
@@ -20,16 +20,16 @@ at_Max_Capacity :-
 
 // Scouting.
 
-+!block_me_right[source(collector)] : true <- 
++!block_me_right[source(collectorB)] : true <- 
 	!move(1, 0, 1).
 	
-+!block_me_down[source(collector)] : true <-
++!block_me_down[source(collectorB)] : true <-
 	!move(0, 1, 1).
 	
 	
 // Initial Positioning.
 
-+!move_down(Y)[source(collector)] : true <-
++!move_down(Y)[source(collectorB)] : true <-
 	!move(0, Y, 1);
 	!scan_for_gold.
 	
@@ -80,6 +80,7 @@ at_Max_Capacity :-
 	?mapWidth(Width);
 	?xPosition(X);
 	Orient = Width - X;
+	.send(collectorB, tell, sendNext);
 	rover.ia.get_config(C,R,S,T);
 	!move(Orient,R,1).
 
@@ -150,8 +151,8 @@ at_Max_Capacity :-
 								 ?yPosition(YPosition);
 								 XLocation = XPosition + X;
 								 YLocation = YPosition + Y;
-								 .send(collector, achieve, collect_gold(XLocation, YLocation, Q));
-								 .send(collector, tell, gold_at(XLocation, YLocation, Q));
+								 .send(collectorB, achieve, collect_gold(XLocation, YLocation, Q));
+								 .send(collectorB, tell, gold_at(XLocation, YLocation, Q));
 								 !move_strategically.
 
 + discovery(X, Y, Q, diamond) : true <- .print("Found diamond.");
@@ -159,8 +160,8 @@ at_Max_Capacity :-
 								 ?yPosition(YPosition);
 								 XLocation = XPosition + X;
 								 YLocation = YPosition + Y;
-								 .send(collector, achieve, collect_gold(XLocation, YLocation, Q));
-								 .send(collector, tell, gold_at(XLocation, YLocation, Q));
+								 .send(collectorB, achieve, collect_gold(XLocation, YLocation, Q));
+								 .send(collectorB, tell, gold_at(XLocation, YLocation, Q));
 								 !move_strategically.
 
 

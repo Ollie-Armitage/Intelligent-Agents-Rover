@@ -4,7 +4,7 @@ MAS scenario_3 {
 	environment:	rover.RoverWorld("scenario_3.mas2j", "scenario.json",  3, yes, "1.1.4", 50)
 	
 	agents:
-		explorer [max_capacity = 3, scan_range = 5, speed = 1, mindinspector="gui(cycle,html,history)"] #2;
+		explorer [max_capacity = 0, scan_range = 5, speed = 4, mindinspector="gui(cycle,html,history)"] #2;
 		collector  [max_capacity = 5, scan_range = 0, speed = 4, mindinspector="gui(cycle,html,history)"] #1;
 
 	aslSourcePath:
